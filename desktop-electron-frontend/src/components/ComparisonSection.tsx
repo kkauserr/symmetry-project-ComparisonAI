@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from 'react'
+import { useState, useEffect } from 'react'
 import { useForm } from 'react-hook-form'
 import { Loader2, FileText, Globe, BarChart3 } from 'lucide-react'
 import { compareArticles } from '@/services/compareArticles'
@@ -9,6 +9,21 @@ import { Textarea } from '@/components/ui/textarea'
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form'
 import { Separator } from '@/components/ui/separator'
 import { Input } from '@/components/ui/input'
+
+const PRESELECTED_ARTICLES = [
+  { label: 'Python (programming language)', url: 'https://en.wikipedia.org/wiki/Python_(programming_language)' },
+  { label: 'Solar System', url: 'https://en.wikipedia.org/wiki/Solar_System' },
+  { label: 'Artificial intelligence', url: 'https://en.wikipedia.org/wiki/Artificial_intelligence' },
+  { label: 'World War II', url: 'https://en.wikipedia.org/wiki/World_War_II' },
+  { label: 'C++', url: 'https://en.wikipedia.org/wiki/C%2B%2B' },
+  { label: 'Unicode', url: 'https://en.wikipedia.org/wiki/Unicode' },
+]
+
+const THRESHOLD_PRESETS = [
+  { label: 'Sensitive', value: 0.55, description: 'finds more differences' },
+  { label: 'Balanced', value: 0.65, description: 'good default' },
+  { label: 'Strict', value: 0.75, description: 'flags only stronger differences' },
+]
 
 const ComparisonSection = () => {
   const [isLoading, setIsLoading] = useState(false)
@@ -25,10 +40,10 @@ const ComparisonSection = () => {
   const [sourceLanguage, setSourceLanguage] = useState('en')
   const [targetLanguage, setTargetLanguage] = useState('en')
   const [targetUrl, setTargetUrl] = useState('')
+  const [sourceUrl, setSourceUrl] = useState('')
   const [isTargetTextReadOnly, setIsTargetTextReadOnly] = useState(false)
   const [isTargetLanguageReadOnly, setIsTargetLanguageReadOnly] = useState(false)
   const [similarityThreshold, setSimilarityThreshold] = useState(0.65)
-  const sourceUrlRef = useRef<HTMLInputElement>(null)
 
   // Fetch default threshold from backend on mount
   useEffect(() => {
@@ -54,6 +69,7 @@ const ComparisonSection = () => {
 
       // If source URL is provided, extract language and set target URL
       if (sourceUrl) {
+        setSourceUrl(sourceUrl)
         const langMatch = sourceUrl.match(/https?:\/\/([a-z]{2})\.wikipedia\.org/)
         const sourceLang = langMatch ? langMatch[1] : 'en'
         setSourceLanguage(sourceLang)
@@ -193,17 +209,35 @@ const ComparisonSection = () => {
             </div>
 
             <div className="flex gap-2">
+              <select
+                value=""
+                onChange={(e) => {
+                  if (e.target.value) {
+                    setSourceUrl(e.target.value)
+                  }
+                }}
+                className="w-64 px-3 py-2 border border-gray-300 rounded-md bg-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+                disabled={isLoading}
+              >
+                <option value="">Article Presets</option>
+                {PRESELECTED_ARTICLES.map((article) => (
+                  <option key={article.url} value={article.url}>
+                    {article.label}
+                  </option>
+                ))}
+              </select>
               <input
                 type="url"
                 placeholder="Enter Wikipedia URL"
+                value={sourceUrl}
+                onChange={(e) => setSourceUrl(e.target.value)}
                 className="flex-1 px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                ref={sourceUrlRef}
               />
               <Button
                 type="button"
                 variant="outline"
                 onClick={() => {
-                  const url = sourceUrlRef.current?.value
+                  const url = sourceUrl.trim()
                   if (url) {
                     fetchFromUrl(url, setSourceText, setSourceLanguage)
                   }
@@ -213,6 +247,9 @@ const ComparisonSection = () => {
                 Fetch
               </Button>
             </div>
+            <p className="text-xs text-gray-500">
+              Pick a preset to auto-fill the URL, then click Fetch to load article text.
+            </p>
 
             <FormField
               control={form.control}
@@ -294,6 +331,23 @@ const ComparisonSection = () => {
           <div className="space-y-2">
             <label className="text-sm font-medium">Similarity Threshold</label>
             <div className="flex items-center gap-4">
+              <select
+                value=""
+                onChange={(e) => {
+                  const value = Number(e.target.value)
+                  if (!Number.isNaN(value) && value > 0) {
+                    setSimilarityThreshold(value)
+                  }
+                }}
+                className="w-56 px-3 py-2 border border-gray-300 rounded-md bg-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+              >
+                <option value="">Threshold presets</option>
+                {THRESHOLD_PRESETS.map((preset) => (
+                  <option key={preset.label} value={preset.value}>
+                    {preset.label} ({preset.value}) - {preset.description}
+                  </option>
+                ))}
+              </select>
               <Input
                 type="number"
                 min="0"
@@ -303,9 +357,7 @@ const ComparisonSection = () => {
                 onChange={(e) => setSimilarityThreshold(parseFloat(e.target.value) || 0.65)}
                 className="w-24"
               />
-              <span className="text-sm text-gray-500">
-                Lower values = more sensitive (detects more differences)
-              </span>
+              <span className="text-sm text-gray-500">Lower values catch more differences; higher values are stricter.</span>
             </div>
           </div>
 
