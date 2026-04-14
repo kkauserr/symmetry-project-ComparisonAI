@@ -20,9 +20,9 @@ const PRESELECTED_ARTICLES = [
 ]
 
 const THRESHOLD_PRESETS = [
-  { label: 'Sensitive', value: 0.55, description: 'finds more differences' },
-  { label: 'Balanced', value: 0.65, description: 'good default' },
-  { label: 'Strict', value: 0.75, description: 'flags only stronger differences' },
+  { label: 'Sensitive', value: 0.55, description: 'fewer flags; fast review', speedRange: '1s-5s' },
+  { label: 'Balanced', value: 0.65, description: 'balanced output; fast-medium review', speedRange: '1s-3s' },
+  { label: 'Strict', value: 0.75, description: 'more flags; slower review', speedRange: '3s-11s' },
 ]
 
 const ComparisonSection = () => {
@@ -357,7 +357,18 @@ const ComparisonSection = () => {
                 onChange={(e) => setSimilarityThreshold(parseFloat(e.target.value) || 0.65)}
                 className="w-24"
               />
-              <span className="text-sm text-gray-500">Lower values catch more differences; higher values are stricter.</span>
+              <span className="text-sm text-gray-500">Lower values are more lenient with fewer flags; higher values catch more differences (more to review).</span>
+            </div>
+            <div className="rounded-md border border-gray-200 bg-gray-50 px-3 py-2 text-xs text-gray-600">
+              <div className="font-medium text-gray-700 mb-1">Observed speed guide (current test set)</div>
+              <ul className="space-y-1">
+                {THRESHOLD_PRESETS.map((preset) => (
+                  <li key={preset.label}>
+                    <span className="font-medium">{preset.label} ({preset.value}): </span>
+                    <span>{preset.speedRange}, {preset.description}</span>
+                  </li>
+                ))}
+              </ul>
             </div>
           </div>
 
